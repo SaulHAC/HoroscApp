@@ -1,16 +1,18 @@
 package com.example.horoscapp.ui.palmistry
 
 import android.os.Bundle
-import androidx.fragment.app.Fragment
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
-import com.example.horoscapp.Manifest
-import com.example.horoscapp.R
+import androidx.fragment.app.Fragment
 import com.example.horoscapp.databinding.FragmentPalmistryBinding
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -28,7 +30,7 @@ class PalmistryFragment : Fragment() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            //start camera
+            startCamera()
         } else {
             Toast.makeText(
                 requireContext(),
@@ -42,10 +44,33 @@ class PalmistryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         if (checkCameraPermission()) {
-            //start camera
+            startCamera()
         } else {
             requestPermissionLauncher.launch(CAMERA_PERMISSION)
         }
+    }
+
+    private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
+
+        cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+
+            val preview = Preview.Builder()
+                .build()
+                .also {
+                    it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+                }
+
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            try {
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview)
+            }catch (e:Exception){
+                Log.e("aris", "Algo peto ${e.message}")
+            }
+        }, ContextCompat.getMainExecutor(requireContext()))
     }
 
     private fun checkCameraPermission(): Boolean {
